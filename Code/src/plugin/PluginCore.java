@@ -7,16 +7,12 @@ import java.awt.EventQueue;
 import java.util.HashMap;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
 public class PluginCore {
 	// GUI Widgets that we will need
 	private JFrame frame;
 	private JPanel contentPane;
 	private JLabel bottomLabel;
-	private JList sideList;
-	private DefaultListModel<String> listModel;
 	private JPanel centerEnvelope;
 	
 	// For holding registered plugin
@@ -37,12 +33,7 @@ public class PluginCore {
 		contentPane.setPreferredSize(new Dimension(700, 500));
 		bottomLabel = new JLabel("No plugins registered yet!");
 		
-		listModel = new DefaultListModel<String>();
-		sideList = new JList(listModel);
-		sideList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		sideList.setLayoutOrientation(JList.VERTICAL);
-		JScrollPane scrollPane = new JScrollPane(sideList);
-		scrollPane.setPreferredSize(new Dimension(100, 50));
+		JScrollPane scrollPane = SideBarCreator.getSideBar(this);
 		
 		// Create center display area
 		centerEnvelope = new JPanel(new BorderLayout());
@@ -52,48 +43,6 @@ public class PluginCore {
 		contentPane.add(centerEnvelope, BorderLayout.CENTER);
 		contentPane.add(scrollPane, BorderLayout.EAST);
 		contentPane.add(bottomLabel, BorderLayout.SOUTH);
-		
-		// Add action listeners
-		sideList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				// If the list is still updating, return
-				if(e.getValueIsAdjusting())
-					return;
-				
-				// List has finalized selection, let's process further
-				int index = sideList.getSelectedIndex();
-				String id = listModel.elementAt(index);
-				Plugin plugin = idToPlugin.get(id);
-				
-				if(plugin == null || plugin.equals(currentPlugin))
-					return;
-				
-				// Stop previously running plugin
-				if(currentPlugin != null)
-					currentPlugin.stop();
-				
-				// The newly selected plugin is our current plugin
-				currentPlugin = plugin;
-				
-				// Clear previous working area
-				centerEnvelope.removeAll();
-				
-				// Create new working area
-				JPanel centerPanel = new JPanel();
-				centerEnvelope.add(centerPanel, BorderLayout.CENTER); 
-				
-				// Ask plugin to layout the working area
-				currentPlugin.layout(centerPanel);
-				contentPane.revalidate();
-				contentPane.repaint();
-				
-				// Start the plugin
-				currentPlugin.start();
-				
-				bottomLabel.setText("The " + currentPlugin.getId() + " is running!");
-			}
-		});
 		
 		// Start the plugin manager now that the core is ready
 		try {
@@ -127,17 +76,37 @@ public class PluginCore {
 	
 	public void addPlugin(Plugin plugin) {
 		this.idToPlugin.put(plugin.getId(), plugin);
-		this.listModel.addElement(plugin.getId());
+		SideBarCreator.addElement(plugin.getId());
 		this.bottomLabel.setText("The " + plugin.getId() + " plugin has been recently added!");
 	}
 	
 	public void removePlugin(String id) {
 		Plugin plugin = this.idToPlugin.remove(id);
-		this.listModel.removeElement(id);
+		SideBarCreator.removeElement(id);
 		
 		// Stop the plugin if it is still running
 		plugin.stop();
 
 		this.bottomLabel.setText("The " + plugin.getId() + " plugin has been recently removed!");
+	}
+
+	
+	// Getters
+	public JPanel getContentPane() {
+		return contentPane;
+	}
+	public JPanel getCenterEnvelope() {
+		return centerEnvelope;
+	}
+	public Plugin getCurrentPlugin() {
+		return currentPlugin;
+	}
+	public Plugin getIdToPlugin(String id){
+		return this.idToPlugin.get(id);
+	}
+	
+	// Setters
+	public void setBottomLabelText(String text){
+		this.bottomLabel.setText(text);
 	}
 }
